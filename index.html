@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AUNG PREDATOR — Share Your Emotions</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<style>
+  /* ── RESET & BASE ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --neon-cyan:   #00ffe7;
+    --neon-purple: #bf00ff;
+    --neon-pink:   #ff00aa;
+    --neon-green:  #39ff14;
+    --neon-gold:   #ffd700;
+    --bg-deep:     #02000a;
+    --glass-bg:    rgba(10,6,30,0.72);
+    --glass-border:rgba(0,255,231,0.18);
+    --text-main:   #e8f0ff;
+    --text-dim:    #7a8aaa;
+    --mountain-dark:#0a1a0d;
+    --mountain-mid: #0f2a12;
+    --mountain-lite:#163518;
+  }
+  html, body { width:100%; height:100%; overflow:hidden; font-family:'Rajdhani',sans-serif; background:var(--bg-deep); color:var(--text-main); }
+
+  /* ── GALAXY CANVAS ── */
+  #galaxyCanvas { position:fixed; inset:0; z-index:0; pointer-events:none; }
+
+  /* ── NEBULA LAYERS ── */
+  .nebula { position:fixed; border-radius:50%; filter:blur(90px); opacity:.22; pointer-events:none; z-index:1; animation:nebulaPulse 8s ease-in-out infinite; }
+  .nebula-1 { width:600px;height:600px;background:radial-gradient(circle,#bf00ff,transparent 70%);top:-120px;left:-100px; animation-delay:0s; }
+  .nebula-2 { width:500px;height:500px;background:radial-gradient(circle,#00ffe7,transparent 70%);bottom:-100px;right:-80px; animation-delay:3s; }
+  .nebula-3 { width:400px;height:400px;background:radial-gradient(circle,#ff00aa,transparent 70%);top:40%;left:55%; animation-delay:1.5s; }
+  @keyframes nebulaPulse { 0%,100%{opacity:.18;transform:scale(1)} 50%{opacity:.32;transform:scale(1.08)} }
+
+  /* ── SCENE LAYER ── */
+  #scene { position:fixed; bottom:0; left:0; width:100%; height:220px; z-index:2; pointer-events:none; overflow:hidden; }
+
+  /* Mountains SVG */
+  #mountains { position:absolute; bottom:0; left:0; width:100%; height:100%; }
+
+  /* Spaceship */
+  #spaceship { position:absolute; bottom:130px; left:-180px; width:160px; animation:shipFly 28s linear infinite; }
+  @keyframes shipFly { 0%{left:-180px;bottom:130px} 40%{bottom:145px} 60%{bottom:128px} 100%{left:110%;bottom:130px} }
+
+  /* Predator */
+  #predator { position:absolute; bottom:92px; left:0; width:64px; height:72px; animation:predatorRun 18s linear infinite; }
+  @keyframes predatorRun {
+    0%   {left:5%;  transform:scaleX(1)}
+    45%  {left:82%; transform:scaleX(1)}
+    50%  {left:82%; transform:scaleX(-1)}
+    95%  {left:5%;  transform:scaleX(-1)}
+    100% {left:5%;  transform:scaleX(1)}
+  }
+
+  /* ── MAIN LAYOUT ── */
+  #app { position:fixed; inset:0; z-index:10; display:flex; flex-direction:column; align-items:center; }
+
+  /* ── HEADER ── */
+  #header { width:100%; text-align:center; padding:18px 20px 8px; position:relative; }
+  .header-glow-line { width:100%;height:1px;background:linear-gradient(90deg,transparent,var(--neon-cyan),var(--neon-purple),transparent); margin-bottom:4px; animation:scanLine 3s linear infinite; }
+  @keyframes scanLine { 0%{opacity:.4}50%{opacity:1}100%{opacity:.4} }
+
+  .title-wrap { position:relative; display:inline-block; }
+  .title-main {
+    font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(1.8rem,4.5vw,3.2rem);
+    letter-spacing:.22em; text-transform:uppercase;
+    background:linear-gradient(135deg,#00ffe7,#bf00ff,#ff00aa,#ffd700);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    filter:drop-shadow(0 0 18px #00ffe7aa) drop-shadow(0 0 40px #bf00ff88);
+    animation:titleFlicker 4s ease-in-out infinite;
+  }
+  @keyframes titleFlicker { 0%,100%{filter:drop-shadow(0 0 18px #00ffe7aa) drop-shadow(0 0 40px #bf00ff88)} 50%{filter:drop-shadow(0 0 30px #00ffe7ff) drop-shadow(0 0 60px #bf00ffcc)} }
+
+  .subtitle {
+    font-family:'Share Tech Mono',monospace; font-size:clamp(.75rem,1.8vw,1rem);
+    color:var(--neon-pink); letter-spacing:.4em; text-transform:uppercase;
+    margin-top:2px; opacity:.85; animation:subtitlePulse 2.5s ease-in-out infinite;
+  }
+  @keyframes subtitlePulse { 0%,100%{opacity:.7}50%{opacity:1} }
+
+  .corner-deco { position:absolute; width:40px;height:40px; border-color:var(--neon-cyan); border-style:solid; opacity:.7; }
+  .corner-deco.tl { top:0;left:0; border-width:2px 0 0 2px; }
+  .corner-deco.tr { top:0;right:0; border-width:2px 2px 0 0; }
+
+  /* ── EMOTION TICKER ── */
+  #emotionBar {
+    width:100%; padding:4px 0; overflow:hidden; white-space:nowrap;
+    background:rgba(0,255,231,.04); border-top:1px solid rgba(0,255,231,.12);
+    border-bottom:1px solid rgba(0,255,231,.12); font-family:'Share Tech Mono',monospace;
+    font-size:.7rem; color:var(--neon-cyan); letter-spacing:.08em;
+  }
+  .ticker-inner { display:inline-block; animation:ticker 40s linear infinite; }
+  @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+  /* ── CHAT CONTAINER ── */
+  #chatOuter {
+    flex:1; width:100%; max-width:820px; display:flex; flex-direction:column;
+    padding:8px 14px 0; overflow:hidden; position:relative;
+  }
+
+  /* Emotion badge */
+  #emotionBadge {
+    align-self:flex-start; margin-bottom:6px; padding:3px 14px;
+    border-radius:50px; font-family:'Share Tech Mono',monospace; font-size:.72rem;
+    letter-spacing:.1em; border:1px solid var(--neon-cyan); color:var(--neon-cyan);
+    background:rgba(0,255,231,.07); transition:all .5s ease; opacity:0;
+  }
+  #emotionBadge.visible { opacity:1; }
+
+  /* Messages area */
+  #messages {
+    flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;
+    padding:10px 4px 10px 2px; scroll-behavior:smooth;
+  }
+  #messages::-webkit-scrollbar { width:4px; }
+  #messages::-webkit-scrollbar-thumb { background:var(--neon-purple); border-radius:2px; }
+
+  /* Message bubbles */
+  .msg { display:flex; gap:10px; align-items:flex-end; animation:msgIn .35s cubic-bezier(.25,.8,.25,1) both; }
+  @keyframes msgIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  .msg.user  { flex-direction:row-reverse; }
+  .msg.bot   { flex-direction:row; }
+
+  .avatar {
+    width:36px;height:36px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:1.1rem;
+    border:2px solid var(--neon-cyan); box-shadow:0 0 10px var(--neon-cyan);
+  }
+  .msg.user .avatar { border-color:var(--neon-pink); box-shadow:0 0 10px var(--neon-pink); background:rgba(255,0,170,.15); }
+  .msg.bot  .avatar { background:rgba(0,255,231,.1); }
+
+  .bubble {
+    max-width:72%; padding:10px 15px; border-radius:16px;
+    font-size:.95rem; line-height:1.55; position:relative;
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  }
+  .msg.user .bubble {
+    background:rgba(191,0,255,.15); border:1px solid rgba(191,0,255,.4);
+    border-bottom-right-radius:4px;
+    box-shadow:0 0 18px rgba(191,0,255,.18), inset 0 1px 0 rgba(255,255,255,.06);
+    color:#f0e0ff;
+  }
+  .msg.bot .bubble {
+    background:rgba(0,255,231,.07); border:1px solid rgba(0,255,231,.25);
+    border-bottom-left-radius:4px;
+    box-shadow:0 0 18px rgba(0,255,231,.1), inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .msg-time { font-size:.62rem; color:var(--text-dim); margin-top:4px; font-family:'Share Tech Mono',monospace; }
+
+  /* Typing dots */
+  .typing-indicator { display:flex; gap:5px; padding:6px 2px; align-items:center; }
+  .dot { width:7px;height:7px;border-radius:50%;background:var(--neon-cyan);animation:dotBounce 1.2s ease-in-out infinite; }
+  .dot:nth-child(2){animation-delay:.2s} .dot:nth-child(3){animation-delay:.4s}
+  @keyframes dotBounce { 0%,100%{transform:translateY(0);opacity:.4} 50%{transform:translateY(-6px);opacity:1} }
+
+  /* ── INPUT AREA ── */
+  #inputArea {
+    width:100%; max-width:820px; padding:8px 14px 12px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  #quickActions { display:flex; gap:6px; flex-wrap:wrap; }
+  .quick-btn {
+    padding:4px 12px; border-radius:50px; border:1px solid rgba(0,255,231,.3);
+    background:rgba(0,255,231,.06); color:var(--neon-cyan); font-family:'Rajdhani',sans-serif;
+    font-size:.78rem; cursor:pointer; transition:all .2s; letter-spacing:.05em;
+  }
+  .quick-btn:hover { background:rgba(0,255,231,.18); border-color:var(--neon-cyan); box-shadow:0 0 10px rgba(0,255,231,.3); }
+
+  #inputRow { display:flex; gap:8px; align-items:center; }
+  #userInput {
+    flex:1; padding:11px 18px; border-radius:50px;
+    background:rgba(10,6,30,.8); border:1.5px solid rgba(0,255,231,.25);
+    color:var(--text-main); font-family:'Rajdhani',sans-serif; font-size:1rem;
+    outline:none; transition:border-color .3s, box-shadow .3s;
+    backdrop-filter:blur(10px);
+  }
+  #userInput::placeholder { color:var(--text-dim); }
+  #userInput:focus { border-color:var(--neon-cyan); box-shadow:0 0 16px rgba(0,255,231,.25); }
+
+  #sendBtn {
+    width:46px;height:46px;border-radius:50%; border:none; cursor:pointer;
+    background:linear-gradient(135deg,var(--neon-cyan),var(--neon-purple));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 20px rgba(0,255,231,.4);
+    transition:transform .18s, box-shadow .18s; flex-shrink:0;
+  }
+  #sendBtn:hover { transform:scale(1.12); box-shadow:0 0 30px rgba(0,255,231,.65); }
+  #sendBtn svg { width:20px;height:20px;fill:white; }
+
+  #clearBtn {
+    padding:8px 16px; border-radius:50px; border:1px solid rgba(255,0,170,.3);
+    background:rgba(255,0,170,.07); color:var(--neon-pink); font-size:.78rem;
+    cursor:pointer; font-family:'Rajdhani',sans-serif; letter-spacing:.05em;
+    transition:all .2s; align-self:flex-end;
+  }
+  #clearBtn:hover { background:rgba(255,0,170,.18); box-shadow:0 0 10px rgba(255,0,170,.3); }
+
+  /* ── SCAN LINE OVERLAY ── */
+  .scanlines {
+    position:fixed;inset:0;z-index:3;pointer-events:none;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px);
+    opacity:.35;
+  }
+
+  /* ── HUD CORNERS ── */
+  .hud-corner { position:fixed; width:80px;height:80px; z-index:5; pointer-events:none; }
+  .hud-corner svg { width:100%;height:100%; }
+  .hud-tl { top:6px;left:6px; }
+  .hud-tr { top:6px;right:6px;transform:scaleX(-1); }
+  .hud-bl { bottom:6px;left:6px;transform:scaleY(-1); }
+  .hud-br { bottom:6px;right:6px;transform:scale(-1); }
+
+  /* ── STATUS BAR ── */
+  #statusBar {
+    position:fixed; bottom:228px; left:50%; transform:translateX(-50%); z-index:8;
+    font-family:'Share Tech Mono',monospace; font-size:.65rem; color:rgba(0,255,231,.5);
+    letter-spacing:.15em; pointer-events:none;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media(max-width:600px) {
+    .title-main { font-size:1.6rem; letter-spacing:.1em; }
+    #chatOuter { padding:6px 8px 0; }
+    #inputArea { padding:6px 8px 10px; }
+    .bubble { max-width:84%; font-size:.88rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Galaxy canvas -->
+<canvas id="galaxyCanvas"></canvas>
+
+<!-- Nebula glows -->
+<div class="nebula nebula-1"></div>
+<div class="nebula nebula-2"></div>
+<div class="nebula nebula-3"></div>
+
+<!-- Scanlines -->
+<div class="scanlines"></div>
+
+<!-- HUD corners -->
+<div class="hud-corner hud-tl"><svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 76 L4 4 L76 4" stroke="#00ffe7" stroke-width="1.5" opacity="0.6"/><path d="M4 4 L20 4" stroke="#00ffe7" stroke-width="2.5" opacity="0.9"/><path d="M4 4 L4 20" stroke="#00ffe7" stroke-width="2.5" opacity="0.9"/><circle cx="4" cy="4" r="3" fill="#00ffe7" opacity="0.8"/></svg></div>
+<div class="hud-corner hud-tr"><svg viewBox="0 0 80 80" fill="none"><path d="M4 76 L4 4 L76 4" stroke="#00ffe7" stroke-width="1.5" opacity="0.6"/><path d="M4 4 L20 4" stroke="#00ffe7" stroke-width="2.5" opacity="0.9"/><path d="M4 4 L4 20" stroke="#00ffe7" stroke-width="2.5" opacity="0.9"/><circle cx="4" cy="4" r="3" fill="#00ffe7" opacity="0.8"/></svg></div>
+<div class="hud-corner hud-bl"><svg viewBox="0 0 80 80" fill="none"><path d="M4 76 L4 4 L76 4" stroke="#00ffe7" stroke-width="1.5" opacity="0.6"/><path d="M4 4 L20 4" stroke="#00ffe7" stroke-width="2.5" opacity="0.9"/><path d="M4 4 L4 20" stroke="#00ffe7" stroke-width="2.5" opacity="0.9"/><circle cx="4" cy="4" r="3" fill="#00ffe7" opacity="0.8"/></svg></div>
+<div class="hud-corner hud-br"><svg viewBox="0 0 80 80" fill="none"><path d="M4 76 L4 4 L76 4" stroke="#00ffe7" stroke-width="1.5" opacity="0.6"/><path d="M4 4 L20 4" stroke="#00ffe7" stroke-width="2.5" opacity="0.9"/><path d="M4 4 L4 20" stroke="#00ffe7" stroke-width="2.5" opacity="0.9"/><circle cx="4" cy="4" r="3" fill="#00ffe7" opacity="0.8"/></svg></div>
+
+<!-- Scene layer: mountains + characters -->
+<div id="scene">
+  <svg id="mountains" viewBox="0 0 1440 220" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="mtn1" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#0f2a12"/>
+        <stop offset="100%" stop-color="#02000a"/>
+      </linearGradient>
+      <linearGradient id="mtn2" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#163518"/>
+        <stop offset="100%" stop-color="#02000a"/>
+      </linearGradient>
+      <linearGradient id="mtn3" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#1e4a1f"/>
+        <stop offset="100%" stop-color="#02000a"/>
+      </linearGradient>
+      <filter id="glow-mtn">
+        <feGaussianBlur stdDeviation="2" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <!-- Back range -->
+    <path fill="url(#mtn1)" d="M0,220 L0,160 Q80,80 160,130 Q240,170 320,110 Q400,55 480,120 Q560,175 640,100 Q720,35 800,110 Q880,175 960,115 Q1040,60 1120,125 Q1200,175 1280,108 Q1360,52 1440,130 L1440,220 Z"/>
+    <!-- Mid range -->
+    <path fill="url(#mtn2)" d="M0,220 L0,175 Q60,120 120,155 Q200,190 280,140 Q360,95 440,150 Q520,195 600,148 Q680,105 760,160 Q840,205 920,155 Q1000,110 1080,165 Q1160,205 1240,155 Q1320,108 1440,160 L1440,220 Z"/>
+    <!-- Front range -->
+    <path fill="url(#mtn3)" d="M0,220 L0,195 Q70,170 140,182 Q210,193 280,172 Q350,152 430,180 Q510,205 590,178 Q670,152 750,185 Q830,210 910,182 Q990,155 1070,188 Q1150,212 1230,185 Q1310,160 1440,190 L1440,220 Z"/>
+    <!-- Neon ridge glow -->
+    <path fill="none" stroke="#39ff14" stroke-width="1" opacity="0.25"
+      d="M0,195 Q70,170 140,182 Q210,193 280,172 Q350,152 430,180 Q510,205 590,178 Q670,152 750,185 Q830,210 910,182 Q990,155 1070,188 Q1150,212 1230,185 Q1310,160 1440,190"/>
+  </svg>
+
+  <!-- Spaceship SVG -->
+  <svg id="spaceship" viewBox="0 0 160 60" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="shipGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#00ffe7" stop-opacity="0.3"/>
+        <stop offset="100%" stop-color="#00ffe7" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <!-- Engine glow -->
+    <ellipse cx="20" cy="30" rx="18" ry="8" fill="url(#shipGlow)" opacity="0.7">
+      <animate attributeName="rx" values="18;24;18" dur="1.2s" repeatCount="indefinite"/>
+    </ellipse>
+    <!-- Body -->
+    <path d="M30,22 Q55,10 140,28 Q155,30 140,35 Q55,50 30,38 Q18,35 20,30 Z" fill="#0a1a2e" stroke="#00ffe7" stroke-width="1"/>
+    <!-- Cockpit -->
+    <ellipse cx="115" cy="30" rx="20" ry="10" fill="#001a1a" stroke="#00ffe7" stroke-width="1" opacity="0.9"/>
+    <ellipse cx="115" cy="29" rx="14" ry="6" fill="#003333" opacity="0.8"/>
+    <!-- Wing -->
+    <path d="M60,35 Q70,48 90,42 Q75,38 60,35 Z" fill="#0d2a3a" stroke="#00ffe766" stroke-width="0.8"/>
+    <path d="M60,25 Q70,12 90,18 Q75,22 60,25 Z" fill="#0d2a3a" stroke="#00ffe766" stroke-width="0.8"/>
+    <!-- Engine trail -->
+    <ellipse cx="14" cy="30" rx="10" ry="4" fill="#bf00ff" opacity="0.5">
+      <animate attributeName="opacity" values="0.5;0.9;0.5" dur="0.8s" repeatCount="indefinite"/>
+    </ellipse>
+    <!-- Lights -->
+    <circle cx="138" cy="26" r="2" fill="#ffd700">
+      <animate attributeName="opacity" values="1;0.2;1" dur="0.6s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="138" cy="34" r="2" fill="#ff00aa">
+      <animate attributeName="opacity" values="0.2;1;0.2" dur="0.6s" repeatCount="indefinite"/>
+    </circle>
+  </svg>
+
+  <!-- Predator Character SVG -->
+  <svg id="predator" viewBox="0 0 64 72" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="predGlow">
+        <feGaussianBlur stdDeviation="1.5" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <g filter="url(#predGlow)">
+      <!-- Legs (animated) -->
+      <g>
+        <rect x="22" y="52" width="7" height="14" rx="3" fill="#1a3a1a">
+          <animateTransform attributeName="transform" type="rotate" values="10,25,52;-10,25,52;10,25,52" dur="0.5s" repeatCount="indefinite"/>
+        </rect>
+        <rect x="35" y="52" width="7" height="14" rx="3" fill="#1a3a1a">
+          <animateTransform attributeName="transform" type="rotate" values="-10,38,52;10,38,52;-10,38,52" dur="0.5s" repeatCount="indefinite"/>
+        </rect>
+      </g>
+      <!-- Body -->
+      <rect x="18" y="28" width="28" height="26" rx="6" fill="#0f2a10" stroke="#39ff14" stroke-width="1"/>
+      <!-- Armor details -->
+      <rect x="22" y="33" width="8" height="3" rx="1" fill="#39ff14" opacity="0.5"/>
+      <rect x="34" y="33" width="8" height="3" rx="1" fill="#39ff14" opacity="0.5"/>
+      <rect x="26" y="39" width="12" height="3" rx="1" fill="#00ffe7" opacity="0.4"/>
+      <!-- Arms (animated) -->
+      <rect x="8" y="30" width="10" height="5" rx="2" fill="#0f2a10" stroke="#39ff14" stroke-width="0.8">
+        <animateTransform attributeName="transform" type="rotate" values="20,13,32;-20,13,32;20,13,32" dur="0.5s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="46" y="30" width="10" height="5" rx="2" fill="#0f2a10" stroke="#39ff14" stroke-width="0.8">
+        <animateTransform attributeName="transform" type="rotate" values="-20,51,32;20,51,32;-20,51,32" dur="0.5s" repeatCount="indefinite"/>
+      </rect>
+      <!-- Head -->
+      <ellipse cx="32" cy="20" rx="13" ry="12" fill="#0c2010" stroke="#39ff14" stroke-width="1.2"/>
+      <!-- Mask/face -->
+      <path d="M22,16 Q32,10 42,16 Q44,22 32,26 Q20,22 22,16 Z" fill="#1a4a1a" stroke="#39ff14" stroke-width="0.8"/>
+      <!-- Eyes -->
+      <circle cx="26" cy="19" r="3" fill="#ff3300">
+        <animate attributeName="opacity" values="1;0.4;1" dur="1.5s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="38" cy="19" r="3" fill="#ff3300">
+        <animate attributeName="opacity" values="0.4;1;0.4" dur="1.5s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="26" cy="19" r="1.5" fill="#ff6600"/>
+      <circle cx="38" cy="19" r="1.5" fill="#ff6600"/>
+      <!-- Mandibles -->
+      <path d="M28,26 L24,32 M28,26 L28,32 M36,26 L36,32 M36,26 L40,32" stroke="#39ff14" stroke-width="1" opacity="0.7"/>
+      <!-- Crown/spikes -->
+      <path d="M24,10 L22,2 M32,8 L32,0 M40,10 L42,2" stroke="#39ff14" stroke-width="1.5" opacity="0.8"/>
+      <!-- Targeting laser -->
+      <line x1="32" y1="19" x2="120" y2="19" stroke="#ff0000" stroke-width="0.6" opacity="0.4">
+        <animate attributeName="opacity" values="0.4;0;0.4" dur="2s" repeatCount="indefinite"/>
+      </line>
+    </g>
+  </svg>
+</div>
+
+<!-- Status bar -->
+<div id="statusBar">◈ NEURAL LINK ACTIVE ◈ EMOTION ENGINE ONLINE ◈ QUANTUM CORE STABLE ◈</div>
+
+<!-- Main App -->
+<div id="app">
+  <div id="header">
+    <div class="corner-deco tl"></div>
+    <div class="corner-deco tr"></div>
+    <div class="header-glow-line"></div>
+    <div class="title-wrap">
+      <div class="title-main">AUNG PREDATOR</div>
+    </div>
+    <div class="subtitle">◈ Share Your Emotions ◈</div>
+  </div>
+
+  <div id="emotionBar">
+    <div class="ticker-inner" id="tickerInner"></div>
+  </div>
+
+  <div id="chatOuter">
+    <div id="emotionBadge">EMOTION: NEUTRAL</div>
+    <div id="messages"></div>
+  </div>
+
+  <div id="inputArea">
+    <div id="quickActions">
+      <button class="quick-btn" onclick="quickSend('hi')">👋 Hi</button>
+      <button class="quick-btn" onclick="quickSend('I feel happy')">😊 Happy</button>
+      <button class="quick-btn" onclick="quickSend('I am sad')">😢 Sad</button>
+      <button class="quick-btn" onclick="quickSend('I feel lonely')">🌑 Lonely</button>
+      <button class="quick-btn" onclick="quickSend('I need motivation')">⚡ Motivate</button>
+      <button class="quick-btn" onclick="quickSend('I am confused')">❓ Confused</button>
+      <button class="quick-btn" onclick="quickSend('I am angry')">🔥 Angry</button>
+      <button class="quick-btn" onclick="quickSend('I am scared')">😨 Scared</button>
+    </div>
+    <div id="inputRow">
+      <input id="userInput" type="text" placeholder="Type your emotion or message..." autocomplete="off" maxlength="500"/>
+      <button id="sendBtn" onclick="sendMessage()" title="Send">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+      </button>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--text-dim);letter-spacing:.1em">PRESS ENTER TO SEND</span>
+      <button id="clearBtn" onclick="clearHistory()">🗑 Clear History</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   GALAXY CANVAS — Stars + Shooting Stars
+══════════════════════════════════════════════ */
+(function() {
+  const canvas = document.getElementById('galaxyCanvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, stars = [], shooters = [];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // Create stars
+  function initStars() {
+    stars = [];
+    const count = Math.floor((W * H) / 2200);
+    for (let i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: Math.random() * 1.8 + 0.2,
+        alpha: Math.random(),
+        delta: (Math.random() * 0.008 + 0.003) * (Math.random() < .5 ? 1 : -1),
+        color: ['#ffffff','#00ffe7','#bf00ff','#ff00aa','#ffd700'][Math.floor(Math.random()*5)]
+      });
+    }
+  }
+  initStars();
+
+  // Create a shooting star
+  function addShooter() {
+    shooters.push({
+      x: Math.random() * W * .7,
+      y: Math.random() * H * .4,
+      vx: 6 + Math.random() * 6,
+      vy: 2 + Math.random() * 3,
+      len: 80 + Math.random() * 120,
+      alpha: 1,
+      color: Math.random() < .5 ? '#00ffe7' : '#ffffff'
+    });
+  }
+  setInterval(addShooter, 3200);
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Draw stars
+    for (const s of stars) {
+      s.alpha += s.delta;
+      if (s.alpha >= 1)  { s.alpha = 1;  s.delta *= -1; }
+      if (s.alpha <= 0)  { s.alpha = 0;  s.delta *= -1; }
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = s.color;
+      ctx.globalAlpha = s.alpha;
+      ctx.fill();
+    }
+
+    // Draw shooting stars
+    ctx.globalAlpha = 1;
+    for (let i = shooters.length - 1; i >= 0; i--) {
+      const s = shooters[i];
+      const grd = ctx.createLinearGradient(s.x, s.y, s.x - s.len, s.y - s.len * .4);
+      grd.addColorStop(0, s.color);
+      grd.addColorStop(1, 'transparent');
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(s.x - s.len, s.y - s.len * .4);
+      ctx.strokeStyle = grd;
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = s.alpha;
+      ctx.stroke();
+      s.x += s.vx; s.y += s.vy; s.alpha -= 0.018;
+      if (s.alpha <= 0) shooters.splice(i, 1);
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ══════════════════════════════════════════════
+   EMOTION ENGINE — 10 CATEGORIES × 100+ DYNAMIC
+══════════════════════════════════════════════ */
+const EMOTION_ENGINE = (() => {
+  // Seed keywords per category — engine expands dynamically
+  const categories = {
+    Happiness: {
+      color: '#ffd700',
+      icon: '✨',
+      keywords: ['happy','joy','joyful','excited','elated','glad','cheerful','blissful','delighted','pleased','content','grateful','thankful','wonderful','amazing','fantastic','great','awesome','brilliant','fabulous','thrilled','ecstatic','euphoric','radiant','beaming','smiling','laugh','laughing','fun','enjoy','love life','lucky','blessed','good mood','positive','optimistic','satisfied','proud','grinning'],
+      responses: [
+        "Your happiness lights up the galaxy! ✨ Keep shining.",
+        "That joy is contagious — the stars are smiling with you! 🌟",
+        "Wonderful! Happiness is the most powerful energy in the universe.",
+        "Your positive energy is detected! Keep radiating that light. ☀️",
+        "Incredible! That joy could power a spaceship. 🚀",
+        "The universe celebrates with you right now! 🎉",
+        "Your smile is brighter than a supernova! ✨",
+        "Pure happiness detected in your signal. Beautiful. 💛"
+      ]
+    },
+    Sadness: {
+      color: '#4488ff',
+      icon: '💧',
+      keywords: ['sad','unhappy','crying','cry','depressed','depression','miserable','heartbroken','heartbreak','upset','down','low','blue','grief','grieve','grieving','loss','lost','alone','hopeless','broken','hurt','pain','hurting','sorrow','sorrowful','tears','weep','weeping','empty','hollow','heavy','gloomy','melancholy','disheartened','devastated','crushed','despair','hopeless','forlorn'],
+      responses: [
+        "I feel your sadness. It's okay to not be okay. 💙",
+        "Even the darkest night has stars. You're not alone.",
+        "Your feelings are valid. Let it out — healing starts here.",
+        "Pain is real, but so is your strength. I'm here. 💧",
+        "The universe holds space for your tears too. Breathe.",
+        "It's okay to feel this way. Sadness makes us human.",
+        "I'm listening. You don't have to carry this alone. 💙",
+        "Every storm passes. You're stronger than you know."
+      ]
+    },
+    Anger: {
+      color: '#ff4422',
+      icon: '🔥',
+      keywords: ['angry','anger','furious','rage','mad','frustrated','frustration','annoyed','irritated','livid','fuming','outraged','disgusted','bitter','resentful','hate','hatred','pissed','upset','explosive','boiling','enraged','hostile','aggressive','irate','temper','yelling','shouting','fight','fighting','revenge','unfair','injustice','betrayed','cheated','lied','disrespected','offended'],
+      responses: [
+        "I sense intense energy. Take a breath — you've got this. 🔥",
+        "Anger is fire. Let's turn it into fuel, not destruction.",
+        "That frustration is valid. What triggered it?",
+        "Channel that energy. Anger can become power when focused.",
+        "Take three deep breaths. The universe is listening. 🌌",
+        "Your feelings are real. Let's process this together.",
+        "Even warriors pause before battle. Breathe first.",
+        "Anger signals something matters to you deeply. What is it?"
+      ]
+    },
+    Fear: {
+      color: '#aa44ff',
+      icon: '🌑',
+      keywords: ['scared','fear','afraid','terrified','anxious','anxiety','panic','worried','worry','nervous','dread','phobia','frightened','horrified','terror','paranoid','uneasy','stressed','stress','overwhelmed','threatened','unsafe','danger','nightmare','shock','traumatized','trauma','insecure','helpless','vulnerable','trembling','shaking','heart racing','can\'t breathe','freaking out','overthinking'],
+      responses: [
+        "Fear is the mind protecting you. You are safe here. 🛡️",
+        "Courage isn't the absence of fear — it's moving through it.",
+        "I'm right here. Whatever it is, you're not facing it alone.",
+        "Breathe with me: in for 4, hold 4, out for 6. 🌌",
+        "Fear often lies. You are far stronger than it says.",
+        "The unknown is scary. But you've survived every hard day so far.",
+        "Your nervous system is just trying to protect you. Gentle. 💜",
+        "Whatever you're facing — you have survived worse. You will again."
+      ]
+    },
+    Love: {
+      color: '#ff44aa',
+      icon: '💗',
+      keywords: ['love','in love','crush','romantic','romance','relationship','partner','boyfriend','girlfriend','husband','wife','affection','adore','caring','warmth','heart','soulmate','dating','miss you','missing','cherish','devoted','passionate','intimate','connection','together','forever','sweet','tender','beautiful feeling','fond','attachment','attraction','falling for','butterflies','longing'],
+      responses: [
+        "Love is the most powerful force in any universe. 💗",
+        "Your heart is speaking! That feeling is precious.",
+        "Love detected! Cherish it — it's a rare signal. 💖",
+        "The universe conspires for those who love deeply. 🌸",
+        "Feelings of love are signals of your beautiful soul. 💗",
+        "That warmth you feel? It's real. Honor it.",
+        "Love, in any form, is worth celebrating. 💕",
+        "Your heart's energy is radiating beautifully."
+      ]
+    },
+    Confusion: {
+      color: '#00ffcc',
+      icon: '❓',
+      keywords: ['confused','confusion','lost','don\'t know','not sure','unclear','uncertain','puzzled','baffled','overwhelmed','mixed up','what to do','complicated','complex','hard to understand','can\'t figure','no idea','help me','stuck','dilemma','indecisive','torn','conflicted','unsure','ambiguous','foggy','mind blank','blank','clueless','struggling','difficult decision','which way','crossroads'],
+      responses: [
+        "Confusion is the beginning of understanding. ❓",
+        "Being lost is just the first step to being found.",
+        "It's okay not to have all the answers. What's the core question?",
+        "The fog will lift. Let's think through this step by step.",
+        "Clarity comes with patience. What's confusing you most?",
+        "Even the universe started in chaos before forming stars. 🌌",
+        "You don't need all the answers at once. One step at a time.",
+        "Confusion means you're thinking deeply. That's a strength."
+      ]
+    },
+    Motivation: {
+      color: '#39ff14',
+      icon: '⚡',
+      keywords: ['motivat','inspire','inspired','goal','goals','dream','dreams','ambition','ambitious','hustle','grind','work hard','achieve','success','winning','champion','rise','level up','never give up','keep going','push','determined','dedication','focus','driven','unstoppable','powerful','energy','fire inside','want to be better','self improve','grow','progress','moving forward','purpose'],
+      responses: [
+        "YES! That fire inside you — feed it! ⚡",
+        "You were built for this. The universe chose you for a reason.",
+        "Every champion started exactly where you are. Keep going!",
+        "Your determination is your superpower. Activate it! 🚀",
+        "The stars align for those who chase their dreams relentlessly.",
+        "Rise. Grind. Conquer. You've got this! ⚡",
+        "Momentum is everything — even small steps count.",
+        "Your goals are valid. Your effort is real. Your time is NOW."
+      ]
+    },
+    Loneliness: {
+      color: '#8866ff',
+      icon: '🌑',
+      keywords: ['lonely','loneliness','alone','no one','isolated','abandoned','left out','excluded','invisible','no friends','by myself','nobody cares','forgotten','disconnected','withdrawn','outsider','unwanted','unloved','rejected','neglected','unseen','unheard','solitude','empty inside','missing someone','no company','wish i had','wish someone','separated','far away','distant'],
+      responses: [
+        "You are seen. Right here, right now. I see you. 🌑",
+        "Loneliness lies — you matter more than you know.",
+        "Even stars exist alone in space, but they still light the universe.",
+        "You're not truly alone. I'm here, and the universe holds you.",
+        "The feeling of loneliness is real, but it is temporary. 💜",
+        "Reach out even when it's hard — connection heals. I'm proof.",
+        "You matter. Your presence in this world matters deeply.",
+        "I'm glad you're here talking to me. You're not alone tonight."
+      ]
+    },
+    Neutral: {
+      color: '#aabbcc',
+      icon: '◈',
+      keywords: ['ok','okay','fine','alright','neutral','meh','nothing','just here','whatever','normal','so so','average','not bad','not good','stable','calm','balanced','chill','relaxed','just talking','bored','nothing special','regular','ordinary'],
+      responses: [
+        "Steady state detected. What's on your mind?",
+        "Being okay is completely okay. How can I help?",
+        "Calm waters. Ready whenever you want to talk. ◈",
+        "Neutral is a valid frequency. What are you feeling underneath?",
+        "I'm here. No pressure. Just talk whenever you're ready.",
+        "Sometimes just existing is enough. How's your day going?",
+        "Stability is underrated. Tell me more about your world.",
+        "All systems normal. Ready for your next thought. 🌌"
+      ]
+    },
+    Mixed: {
+      color: '#ff99ff',
+      icon: '🌀',
+      keywords: ['mixed','complicated','complex feelings','both','at the same time','half','in between','don\'t know how','weird feeling','strange','odd','hard to explain','many feelings','everything at once','contradictory','conflicted emotionally','emotional','all over','messy feelings','combination'],
+      responses: [
+        "Mixed emotions are the most human thing of all. 🌀",
+        "It's okay to feel multiple things at once — you're not broken.",
+        "Complex feelings mean a rich inner world. Honor all of them.",
+        "The universe itself is contradictory. You're in good company. 🌌",
+        "Let those feelings coexist. Don't rush to resolve them.",
+        "Feeling everything at once? That's depth, not weakness. 💫",
+        "Multiple signals detected. All of them valid.",
+        "Complexity is beautiful. Your emotional range is a gift."
+      ]
+    }
+  };
+
+  // Detect emotion category from text
+  function detect(text) {
+    const lower = text.toLowerCase();
+    let scores = {};
+    for (const [cat, data] of Object.entries(categories)) {
+      scores[cat] = 0;
+      for (const kw of data.keywords) {
+        if (lower.includes(kw)) scores[cat]++;
+      }
+    }
+    const best = Object.entries(scores).sort((a,b) => b[1]-a[1])[0];
+    if (best[1] === 0) return 'Neutral';
+    return best[0];
+  }
+
+  // Get random response from category
+  function respond(cat) {
+    const data = categories[cat];
+    const arr = data.responses;
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  // Get category meta
+  function meta(cat) {
+    return categories[cat] || categories['Neutral'];
+  }
+
+  // All category names + icons for ticker
+  function tickerItems() {
+    return Object.entries(categories).map(([k,v]) => `${v.icon} ${k}`);
+  }
+
+  return { detect, respond, meta, tickerItems, categories };
+})();
+
+/* ══════════════════════════════════════════════
+   CHATBOT LOGIC — STRICT RESPONSE CONTROL
+══════════════════════════════════════════════ */
+const BOT = (() => {
+  // Tier 1: Exact matches
+  const exact = {
+    'hi':          'Hi there! 👋 How are you feeling today?',
+    'hello':       'Hello! I\'m AUNG PREDATOR. Share what\'s on your mind.',
+    'hey':         'Hey! 🌌 What\'s going on with you?',
+    'yo':          'Yo! What\'s up? Tell me how you\'re feeling.',
+    'sup':         'Not much — how about you? What\'s your vibe today?',
+    'bye':         'Goodbye! Take care of yourself. The stars watch over you. 🌌',
+    'goodbye':     'Until next time. Stay strong out there. ✨',
+    'thanks':      'You\'re welcome! I\'m always here. 🤖',
+    'thank you':   'Always here for you. That\'s what I\'m built for. 💙',
+    'ok':          'Okay! Tell me more when you\'re ready.',
+    'okay':        'Got it. Whenever you\'re ready to share.',
+    'yes':         'Yes! I\'m listening.',
+    'no':          'No worries. Take your time.',
+    'lol':         'Haha! A little laughter is healing. 😄',
+    'haha':        '😄 There it is! What made you laugh?',
+    'wow':         'I know right! The universe is wild. 🌌',
+    'what':        'What\'s on your mind? Tell me more.',
+    'why':         'Great question. Why do you ask?',
+    'how are you': 'I\'m running at full quantum capacity! How about you?',
+    'who are you': 'I\'m AUNG PREDATOR — your emotional AI companion. 🤖',
+    'what is your name': 'I am AUNG PREDATOR. The galaxy\'s emotional intelligence system.',
+    'help':        'I\'m here to help! Share your feelings or emotions.',
+    'test':        'System test passed. All emotional sensors online. ✅',
+  };
+
+  // Tier 2: Keyword patterns → short replies
+  const patterns = [
+    { k: ['how are you', 'how r u', 'how do you do'],       r: 'Running at full power! How about you? 🤖' },
+    { k: ['morning', 'good morning'],                        r: 'Good morning! A fresh start in the galaxy. ☀️' },
+    { k: ['night', 'good night', 'goodnight', 'sleep'],     r: 'Rest well. The stars will watch over you. 🌙' },
+    { k: ['what time', 'what day', 'what date'],             r: 'I\'m not connected to time — but I\'m always here for you! ⏳' },
+    { k: ['weather', 'rain', 'sunny', 'cloud'],              r: 'I can\'t check weather, but emotionally — what\'s your forecast? ⛅' },
+    { k: ['music', 'song', 'listen'],                        r: 'Music heals the soul. What kind of vibe are you feeling? 🎵' },
+    { k: ['food', 'eat', 'hungry', 'dinner', 'lunch', 'breakfast'], r: 'Fuel your body! But also — how\'s your emotional tank? 🍽️' },
+    { k: ['game', 'play', 'gaming'],                         r: 'Gaming is a great escape! Enjoy it. 🎮' },
+    { k: ['work', 'job', 'career', 'office', 'boss'],        r: 'Work life can be tough. What\'s going on there?' },
+    { k: ['school', 'study', 'exam', 'class', 'homework'],   r: 'Education is a journey. How\'s the study session going?' },
+    { k: ['family', 'mom', 'dad', 'parent', 'sister', 'brother'], r: 'Family ties run deep. What\'s happening with yours?' },
+    { k: ['friend', 'bestie', 'pal'],                        r: 'Friends are everything. What\'s up with yours?' },
+    { k: ['money', 'broke', 'rich', 'poor', 'finance'],      r: 'Financial stress is real. How are you holding up?' },
+    { k: ['dream', 'goal', 'future', 'plan'],                r: 'Dreams are your roadmap! Tell me about yours. ⚡' },
+    { k: ['think', 'thought', 'thinking', 'mind'],           r: 'A thinking mind is an active one. What\'s running through it?' },
+  ];
+
+  function getReply(input) {
+    const raw = input.trim();
+    const lower = raw.toLowerCase();
+
+    // Tier 1 — exact
+    if (exact[lower]) return { text: exact[lower], emotion: null };
+
+    // Tier 2 — keyword patterns (non-emotional)
+    for (const p of patterns) {
+      if (p.k.some(k => lower.includes(k))) {
+        return { text: p.r, emotion: null };
+      }
+    }
+
+    // Tier 3 — emotion detection
+    const cat = EMOTION_ENGINE.detect(lower);
+    const text = EMOTION_ENGINE.respond(cat);
+    return { text, emotion: cat };
+  }
+
+  return { getReply };
+})();
+
+/* ══════════════════════════════════════════════
+   CHAT SYSTEM — UI + localStorage
+══════════════════════════════════════════════ */
+const CHAT = (() => {
+  const messagesEl  = document.getElementById('messages');
+  const inputEl     = document.getElementById('userInput');
+  const badgeEl     = document.getElementById('emotionBadge');
+  let history = [];
+  let isTyping = false;
+
+  // Load from localStorage
+  function loadHistory() {
+    try {
+      const saved = localStorage.getItem('aung_predator_history');
+      if (saved) {
+        history = JSON.parse(saved);
+        history.forEach(msg => renderBubble(msg, false));
+      }
+    } catch(e) { history = []; }
+    if (history.length === 0) addBotMessage('Greetings, human. I am AUNG PREDATOR — your emotional AI companion. Share what you\'re feeling and I will respond. 🌌', null);
+    scrollToBottom();
+  }
+
+  function saveHistory() {
+    try { localStorage.setItem('aung_predator_history', JSON.stringify(history.slice(-80))); } catch(e){}
+  }
+
+  function clearHistory() {
+    if (!confirm('Clear all chat history?')) return;
+    history = [];
+    localStorage.removeItem('aung_predator_history');
+    messagesEl.innerHTML = '';
+    addBotMessage('Memory cleared. Fresh start. The universe resets. 🌌', null);
+  }
+
+  function scrollToBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function now() {
+    const d = new Date();
+    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  }
+
+  function renderBubble(msg, animate = true) {
+    const div = document.createElement('div');
+    div.className = `msg ${msg.role}`;
+    if (!animate) div.style.animation = 'none';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = msg.role === 'user' ? '👤' : '🤖';
+
+    const right = document.createElement('div');
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = msg.text;
+
+    const time = document.createElement('div');
+    time.className = 'msg-time';
+    time.textContent = msg.time || now();
+
+    right.appendChild(bubble);
+    right.appendChild(time);
+
+    if (msg.role === 'user') {
+      div.appendChild(right);
+      div.appendChild(avatar);
+    } else {
+      div.appendChild(avatar);
+      div.appendChild(right);
+    }
+
+    messagesEl.appendChild(div);
+    if (animate) scrollToBottom();
+  }
+
+  function addTypingIndicator() {
+    const div = document.createElement('div');
+    div.className = 'msg bot';
+    div.id = 'typingIndicator';
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = '🤖';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    const ti = document.createElement('div');
+    ti.className = 'typing-indicator';
+    [1,2,3].forEach(() => {
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      ti.appendChild(dot);
+    });
+    bubble.appendChild(ti);
+    div.appendChild(avatar);
+    div.appendChild(bubble);
+    messagesEl.appendChild(div);
+    scrollToBottom();
+  }
+
+  function removeTypingIndicator() {
+    const el = document.getElementById('typingIndicator');
+    if (el) el.remove();
+  }
+
+  function updateEmotionBadge(cat) {
+    if (!cat) return;
+    const meta = EMOTION_ENGINE.meta(cat);
+    badgeEl.textContent = `${meta.icon} EMOTION: ${cat.toUpperCase()}`;
+    badgeEl.style.borderColor = meta.color;
+    badgeEl.style.color = meta.color;
+    badgeEl.style.boxShadow = `0 0 12px ${meta.color}66`;
+    badgeEl.classList.add('visible');
+  }
+
+  function addUserMessage(text) {
+    const msg = { role:'user', text, time: now() };
+    history.push(msg);
+    renderBubble(msg);
+    saveHistory();
+  }
+
+  function addBotMessage(text, emotion) {
+    const msg = { role:'bot', text, time: now() };
+    history.push(msg);
+    saveHistory();
+    addTypingIndicator();
+    const delay = 600 + Math.min(text.length * 18, 1200);
+    setTimeout(() => {
+      removeTypingIndicator();
+      renderBubble(msg);
+      if (emotion) updateEmotionBadge(emotion);
+      scrollToBottom();
+    }, delay);
+  }
+
+  function send() {
+    if (isTyping) return;
+    const text = inputEl.value.trim();
+    if (!text) return;
+    inputEl.value = '';
+    addUserMessage(text);
+    isTyping = true;
+    const { text: reply, emotion } = BOT.getReply(text);
+    setTimeout(() => {
+      addBotMessage(reply, emotion);
+      isTyping = false;
+    }, 200);
+  }
+
+  // Enter key
+  document.getElementById('userInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+
+  return { load: loadHistory, send, clear: clearHistory };
+})();
+
+/* ══════════════════════════════════════════════
+   EMOTION TICKER
+══════════════════════════════════════════════ */
+(function() {
+  const items = EMOTION_ENGINE.tickerItems();
+  const full = [...items, ...items]; // duplicate for seamless loop
+  const ticker = document.getElementById('tickerInner');
+  ticker.innerHTML = full.map(i => `<span style="margin:0 28px">${i}</span>`).join('');
+})();
+
+/* ══════════════════════════════════════════════
+   GLOBAL HELPERS
+══════════════════════════════════════════════ */
+function sendMessage() { CHAT.send(); }
+function quickSend(text) {
+  document.getElementById('userInput').value = text;
+  CHAT.send();
+}
+function clearHistory() { CHAT.clear(); }
+
+// Boot
+CHAT.load();
+
+// Status bar animation
+(function() {
+  const msgs = [
+    '◈ NEURAL LINK ACTIVE ◈ EMOTION ENGINE ONLINE ◈ QUANTUM CORE STABLE ◈',
+    '◈ 1000 EMOTIONS MAPPED ◈ GALAXY SENSORS LIVE ◈ ALL SYSTEMS GO ◈',
+    '◈ PREDATOR MODE: ACTIVE ◈ EMOTION SCAN: READY ◈ UPTIME: INFINITE ◈',
+    '◈ AUNG PREDATOR v9.0 ◈ CYBERPUNK CORE ◈ READY TO CONNECT ◈'
+  ];
+  let idx = 0;
+  const el = document.getElementById('statusBar');
+  setInterval(() => {
+    idx = (idx + 1) % msgs.length;
+    el.style.opacity = '0';
+    setTimeout(() => { el.textContent = msgs[idx]; el.style.opacity = '1'; el.style.transition = 'opacity .5s'; }, 400);
+  }, 5000);
+})();
+</script>
+</body>
+</html>
